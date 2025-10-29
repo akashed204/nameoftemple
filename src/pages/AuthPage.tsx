@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { MailCheck } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address").max(255, "Email too long"),
@@ -42,6 +43,7 @@ const AuthPage = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resetEmail, setResetEmail] = useState("");
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -71,7 +73,7 @@ const AuthPage = () => {
         return;
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
@@ -84,9 +86,13 @@ const AuthPage = () => {
       });
       navigate("/home");
     } catch (error: any) {
+      let description = error.message || "Please check your credentials.";
+      if (error.message === "Email not confirmed") {
+        description = "Please check your inbox and confirm your email address before logging in.";
+      }
       toast({
         title: "Login failed",
-        description: error.message || "Please check your credentials.",
+        description: description,
         variant: "destructive",
       });
     }
@@ -112,21 +118,17 @@ const AuthPage = () => {
         return;
       }
 
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/home`,
+          emailRedirectTo: `${window.location.origin}/auth`,
         },
       });
 
       if (error) throw error;
 
-      toast({
-        title: "Registration successful!",
-        description: "Welcome to our temple community.",
-      });
-      navigate("/home");
+      setRegistrationSuccess(true);
     } catch (error: any) {
       toast({
         title: "Registration failed",
@@ -259,44 +261,54 @@ const AuthPage = () => {
           </TabsContent>
 
           <TabsContent value="register">
-            <form onSubmit={handleRegister} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="register-email">Email</Label>
-                <Input
-                  id="register-email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+            {registrationSuccess ? (
+              <div className="text-center space-y-4 p-6 bg-green-50/50 border border-green-200 rounded-lg">
+                <MailCheck className="w-12 h-12 text-green-600 mx-auto" />
+                <h3 className="text-xl font-bold text-green-800">Check your email</h3>
+                <p className="text-sm text-muted-foreground">
+                  We've sent a confirmation link to <strong className="text-foreground">{email}</strong>. Please click the link to activate your account.
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="register-password">Password</Label>
-                <Input
-                  id="register-password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm Password</Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full bg-gradient-to-r from-primary to-secondary">
-                Create Account
-              </Button>
-            </form>
+            ) : (
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="register-email">Email</Label>
+                  <Input
+                    id="register-email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="register-password">Password</Label>
+                  <Input
+                    id="register-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full bg-gradient-to-r from-primary to-secondary">
+                  Create Account
+                </Button>
+              </form>
+            )}
           </TabsContent>
         </Tabs>
       </Card>
